@@ -1,0 +1,23 @@
+{
+  "name": "intel-webrtc-conf",
+  "main": "intel-webrtc-conf.js",
+  "authors": [
+    "Lautaro <lautarolalvarez@gmail.com>"
+  ],
+  "description": "Angularjs component to user intelwebrtc in conference mode",
+  "keywords": [
+    "intel",
+    "webrtc",
+    "angularjs",
+    "component"
+  ],
+  "license": "MIT",
+  "homepage": "",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ]
+}
