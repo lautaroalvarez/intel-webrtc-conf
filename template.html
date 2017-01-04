@@ -1,9 +1,9 @@
-<div id="intel-webrtc-box-botonera">
+<div id="intel-webrtc-box-botonera" ng-hide="finished">
     <a href="" class="btn" ng-hide='onCall || waitingInit' ng-click='initCall()'>Iniciar Llamada</a>
     <a href="" class="btn ngHide" ng-show='onCall' ng-click='finishCall()'>Finalizar Llamada</a>
     <a href="" class="btn ngHide" ng-show='onCall && config.share_screen && !onShare' ng-click='initShare()'>iniciar Share Screen</a>
     <a href="" class="btn ngHide" ng-show='onShare' ng-click='finishShare()'>Finalizar Share Screen</a>
     <p class="ngHide" ng-show="errorMsg != ''">{{errorMsg}}</p>
 </div>
-<div id="intel-webrtc-box-videos">
+<div id="intel-webrtc-box-videos" ng-hide="finished">
 </div>

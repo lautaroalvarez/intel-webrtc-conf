@@ -36,6 +36,7 @@
         $scope.waitingInit = true;
         $scope.onCall = false;
         $scope.onShare = false;
+        $scope.finished = false;
         $scope.errorMsg = "";
 
         self.start = function(configParams) {
@@ -252,6 +253,7 @@
 
         $scope.finishCall = function() {
             finalizarStreams();
+            $scope.finished = true;
             $scope.onShare = false;
             $scope.onCall = false;
         }
