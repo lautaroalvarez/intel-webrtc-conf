@@ -10,9 +10,7 @@
           templateUrl: currentScriptPath.replace('intel-webrtc-conf.js', 'template.html'),
           controller: ctlrIntelWebrtc,
           bindings: {
-              token: '=',
-              room: '=',
-              shareScreen: '='
+              start: '='
           }
       });
 
@@ -24,8 +22,10 @@
             room_id : '',
             token : '',
             extension_id: '',
-            shareScreen : false,
-            isHttps: false
+            share_screen : false,
+            isHttps: false,
+            stun_server_ip: null,
+            turn_server_ip: null
         };
         var woogeenClient = Woogeen.ConferenceClient.create({});
         var streams = {
@@ -33,8 +33,29 @@
             remote: null,
             localScreen: null
         };
+        $scope.waitingInit = true;
         $scope.onCall = false;
         $scope.onShare = false;
+        $scope.errorMsg = "";
+
+        self.start = function(configParams) {
+            if (typeof configParams === 'undefined' || typeof configParams.room_id === 'undefined' || configParams.room_id == '') {
+                $scope.errorMsg = 'La sala es inválida. No se puede iniciar la llamada.';
+                return;
+            }
+            if (typeof configParams.token === 'undefined' || configParams.token == '') {
+                $scope.errorMsg = 'El token es inválido. No se puede iniciar la llamada.';
+                return;
+            }
+            $scope.config.room_id = configParams.room_id;
+            $scope.config.token = configParams.token;
+            $scope.config.extension_id = (typeof configParams.extension_id !== 'undefined' ? configParams.extension_id : $scope.config.extension_id);
+            $scope.config.share_screen = (typeof configParams.share_screen !== 'undefined' ? configParams.share_screen : $scope.config.share_screen);
+            $scope.config.stun_server_ip = (typeof configParams.stun_server_ip !== 'undefined' ? configParams.stun_server_ip : $scope.config.stun_server_ip);
+            $scope.config.turn_server_ip = (typeof configParams.turn_server_ip !== 'undefined' ? configParams.turn_server_ip : $scope.config.turn_server_ip);
+
+            $scope.waitingInit = false;
+        };
 
         function displayStream (stream, resolution) {
             var div = document.createElement('div');
@@ -75,7 +96,7 @@
             }
         }
 
-        function finishStreams() {
+        function finalizarStreams() {
             $scope.onCall = false;
             $scope.onShare = false;
             if (streams.local){
@@ -103,6 +124,9 @@
         };
 
         woogeenClient.on('server-disconnected', function () {
+            $scope.$apply(function() {
+                $scope.errorMsg = "Hubo un error al conectar con el servidor.";
+            });
             L.Logger.info('Server disconnected');
         });
 
@@ -127,10 +151,20 @@
         });
 
         $scope.initCall = function() {
-            $scope.config.room_id = self.room;
-            $scope.config.extension_id = self.extensionId;
-            $scope.config.token = self.token;
-            $scope.config.shareScreen = (self.shareScreen ? true : false);
+            //setea stun y turn servers
+            var stunJson = {};
+            if ($scope.config.stun_server_ip !== null) {
+                stunJson.urls = 'stun:' + $scope.config.stun_server_ip;
+            }
+            var turnJson = {};
+            if ($scope.config.turn_server_ip !== null) {
+                turnJson.urls = ['turn:' + $scope.config.turn_server_ip + '?transport=udp', 'turn:' + $scope.config.turn_server_ip + '?transport=tcp'];
+            }
+            woogeenClient.setIceServers([
+                stunJson,
+                turnJson
+            ]);
+
             $scope.onCall = true;
             //--setea logs
             L.Logger.setLogLevel(L.Logger.INFO);
@@ -149,6 +183,7 @@
                     if (err) {
                         $scope.$apply(function() {
                             $scope.onCall = false;
+                            $scope.errorMsg = "Hubo un error al acceder a la cámara.";
                         });
                         return L.Logger.error('create LocalStream failed:', err);
                     }
@@ -157,6 +192,9 @@
                     woogeenClient.publish(streams.local, {maxVideoBW: 300}, function (st) {
                         L.Logger.info('stream published:', st.id());
                     }, function (err) {
+                        $scope.$apply(function() {
+                            $scope.errorMsg = "Hubo un error al conectar con el servidor.";
+                        });
                         L.Logger.error('publish failed:', err);
                     });
                 });
@@ -169,6 +207,7 @@
             }, function (err) {
                 $scope.$apply(function() {
                     $scope.onCall = false;
+                    $scope.errorMsg = "Hubo un error al conectar con el servidor.";
                 });
                 L.Logger.error('server connection failed:', err);
             });
@@ -195,6 +234,9 @@
                     });
                 } else {
                     L.Logger.error('share screen failed:', err);
+                    $scope.$apply(function() {
+                        $scope.errorMsg = "No se pudo compartir la pantalla. Por favor verifique que el ID de la extensión sea el correcto.";
+                    });
                 }
             });
         }
@@ -209,14 +251,14 @@
         }
 
         $scope.finishCall = function() {
-            finishStreams();
+            finalizarStreams();
             $scope.onShare = false;
             $scope.onCall = false;
         }
 
 
         $rootScope.$on('$stateChangeSuccess', function() {
-            finishStreams();
+            finalizarStreams();
         });
       }
 
