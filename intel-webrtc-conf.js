@@ -24,8 +24,8 @@
             extension_id: '',
             share_screen : false,
             isHttps: false,
-            stun_server_ip: null,
-            turn_server_ip: null
+            stun_server: null,
+            turn_server: null
         };
         var woogeenClient = Woogeen.ConferenceClient.create({});
         var streams = {
@@ -52,8 +52,8 @@
             $scope.config.token = configParams.token;
             $scope.config.extension_id = (typeof configParams.extension_id !== 'undefined' ? configParams.extension_id : $scope.config.extension_id);
             $scope.config.share_screen = (typeof configParams.share_screen !== 'undefined' ? configParams.share_screen : $scope.config.share_screen);
-            $scope.config.stun_server_ip = (typeof configParams.stun_server_ip !== 'undefined' ? configParams.stun_server_ip : $scope.config.stun_server_ip);
-            $scope.config.turn_server_ip = (typeof configParams.turn_server_ip !== 'undefined' ? configParams.turn_server_ip : $scope.config.turn_server_ip);
+            $scope.config.stun_server = (typeof configParams.stun_server !== 'undefined' ? configParams.stun_server : $scope.config.stun_server);
+            $scope.config.turn_server = (typeof configParams.turn_server !== 'undefined' ? configParams.turn_server : $scope.config.turn_server);
 
             $scope.waitingInit = false;
         };
@@ -154,12 +154,18 @@
         $scope.initCall = function() {
             //setea stun y turn servers
             var stunJson = {};
-            if ($scope.config.stun_server_ip !== null) {
-                stunJson.urls = 'stun:' + $scope.config.stun_server_ip;
+            if ($scope.config.stun_server !== null && typeof $scope.config.stun_server_ip != 'undefined') {
+                stunJson.urls = 'stun:' + $scope.config.stun_server.ip;
             }
             var turnJson = {};
-            if ($scope.config.turn_server_ip !== null) {
-                turnJson.urls = ['turn:' + $scope.config.turn_server_ip + '?transport=udp', 'turn:' + $scope.config.turn_server_ip + '?transport=tcp'];
+            if ($scope.config.turn_server !== null && typeof $scope.config.turn_server.ip !== 'undefined') {
+                turnJson.urls = ['turn:' + $scope.config.turn_server.ip + '?transport=udp', 'turn:' + $scope.config.turn_server.ip + '?transport=tcp'];
+            }
+            if ($scope.config.turn_server !== null && typeof $scope.config.turn_server.username !== 'undefined') {
+                turnJson.username = $scope.config.turn_server.username;
+            }
+            if ($scope.config.turn_server !== null && typeof $scope.config.turn_server.credential !== 'undefined') {
+                turnJson.credential = $scope.config.turn_server.credential;
             }
             woogeenClient.setIceServers([
                 stunJson,
