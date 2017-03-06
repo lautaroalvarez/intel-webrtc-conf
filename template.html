@@ -1,9 +1,86 @@
-<div id="intel-webrtc-box-botonera" ng-hide="finished">
+<style media="screen">
+    .marg-bottom {
+        margin-bottom: 20px;
+    }
+    .center-70 {
+        width: 70%;
+        margin: 0 auto;
+    }
+    /*--- contenedor cuadrado que acomoda el contenido en el medio ---*/
+    .cont-acomodador.size-4-3 {
+        width: 100%;
+        padding-bottom: 75%;
+        position: relative;
+        overflow: hidden;
+    }
+    .cont-acomodador .cont-interno {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        right: 0;
+    }
+    .cont-acomodador .contenido {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+    }
+
+    /*--- estilos de los distintos videos ---*/
+    .intel-webrtc-box-video {
+        position: absolute;
+        -webkit-transition: all ease-out 0.5s;
+        -moz-transition: all ease-out 0.5s;
+        -o-transition: all ease-out 0.5s;
+        transition: all ease-out 0.5s;
+    }
+    .intel-webrtc-box-video.back-100 {
+        width: 100%;
+        height: 100%;
+        z-index: 20;
+        left: 0;
+        top: 0;
+    }
+    .intel-webrtc-box-video.front-small {
+        width: 30%;
+        height: 30%;
+        z-index: 40;
+        left: 65%;
+        top: 65%;
+    }
+    .intel-webrtc-box-video.front-small ~ .intel-webrtc-box-video.front-small {
+        top: 30%;
+    }
+    .intel-webrtc-video {
+        width: 100%;
+        height: 100%;
+    }
+
+    #intel-webrtc-box-videos-full {
+        background-color: black;
+    }
+    #intel-webrtc-box-videos-full:-webkit-full-screen {
+        width: 100%;
+        height: 100%;
+        padding: 0px;
+    }
+</style>
+
+<script type="text/javascript" ng-src="{{jqPluginSrc}}"></script>
+
+<div id="intel-webrtc-box-botonera" class="marg-bottom" ng-hide="finished">
     <a href="" class="btn" ng-hide='onCall || waitingInit' ng-click='initCall()'>Iniciar Llamada</a>
     <a href="" class="btn ngHide" ng-show='onCall' ng-click='finishCall()'>Finalizar Llamada</a>
-    <a href="" class="btn ngHide" ng-show='onCall && config.share_screen && !onShare' ng-click='initShare()'>iniciar Share Screen</a>
+    <a href="" class="btn ngHide" ng-show='onCall && config.share_screen && !onShare' ng-click='initShare()'>Iniciar Share Screen</a>
     <a href="" class="btn ngHide" ng-show='onShare' ng-click='finishShare()'>Finalizar Share Screen</a>
     <p class="ngHide" ng-show="errorMsg != ''">{{errorMsg}}</p>
 </div>
-<div id="intel-webrtc-box-videos" ng-hide="finished">
+
+<div class="center-70">
+  <div class="cont-acomodador size-4-3 ngHide" id="intel-webrtc-box-videos-full" ng-dblclick="maximizeVideos();" ng-show="onCall">
+    <div class="cont-interno">
+      <div class="contenido" id="intel-webrtc-box-videos">
+      </div>
+    </div>
+  </div>
 </div>

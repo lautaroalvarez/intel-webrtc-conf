@@ -1,9 +1,9 @@
 {
   "name": "intel-webrtc-conf",
-  "version": "0.0.2",
+  "version": "0.1.0",
   "main": "intel-webrtc-conf.js",
   "authors": [
-    "Lautaro <lautarolalvarez@gmail.com>"
+    "Lautaro Alvarez <lautarolalvarez@gmail.com>"
   ],
   "description": "Angularjs component to user intelwebrtc in conference mode",
   "keywords": [
@@ -15,11 +15,11 @@
   "license": "MIT",
   "homepage": "",
   "ignore": [
-    "**/.*",
     "node_modules",
-    "bower_components",
-    "test",
-    "tests"
+    "bower_components"
   ],
-  "private": false
+  "private": false,
+  "dependencies": {
+    "jq-fullscreen": "^0.6.0"
+  }
 }

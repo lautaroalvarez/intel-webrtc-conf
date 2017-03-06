@@ -14,9 +14,10 @@
           }
       });
 
-      ctlrIntelWebrtc.$inject = ['$scope', '$rootScope'];
+      ctlrIntelWebrtc.$inject = ['$scope', '$rootScope', '$compile'];
 
-      function ctlrIntelWebrtc($scope, $rootScope) {
+      function ctlrIntelWebrtc($scope, $rootScope, $compile) {
+        $scope.jqPluginSrc = currentScriptPath.replace('intel-webrtc-conf.js', 'components/jq-fullscreen/release/jquery.fullscreen.min.js');
         var self = this;
         $scope.config = {
             room_id : '',
@@ -24,8 +25,8 @@
             extension_id: '',
             share_screen : false,
             isHttps: false,
-            stun_server: null,
-            turn_server: null
+            stun_server_ip: null,
+            turn_server_ip: null
         };
         var woogeenClient = Woogeen.ConferenceClient.create({});
         var streams = {
@@ -52,48 +53,96 @@
             $scope.config.token = configParams.token;
             $scope.config.extension_id = (typeof configParams.extension_id !== 'undefined' ? configParams.extension_id : $scope.config.extension_id);
             $scope.config.share_screen = (typeof configParams.share_screen !== 'undefined' ? configParams.share_screen : $scope.config.share_screen);
-            $scope.config.stun_server = (typeof configParams.stun_server !== 'undefined' ? configParams.stun_server : $scope.config.stun_server);
-            $scope.config.turn_server = (typeof configParams.turn_server !== 'undefined' ? configParams.turn_server : $scope.config.turn_server);
+            $scope.config.stun_server_ip = (typeof configParams.stun_server_ip !== 'undefined' ? configParams.stun_server_ip : $scope.config.stun_server_ip);
+            $scope.config.turn_server_ip = (typeof configParams.turn_server_ip !== 'undefined' ? configParams.turn_server_ip : $scope.config.turn_server_ip);
 
             $scope.waitingInit = false;
         };
 
-        function displayStream (stream, resolution) {
-            var div = document.createElement('div');
-            var streamId = stream.id();
-            if (stream instanceof Woogeen.RemoteMixedStream) {
-                resolution = resolution || {width: 640, height: 480};
+        function displayStream (stream, resolution, type) {
+            var classCont = "";
+            var videoCont = "";
+            if (type == 'localStream') {
+                classCont = "intel-webrtc-box-video back-100";
+                videoCont = "localVideo";
+            } else if (type == 'remoteStream') {
+                classCont = "intel-webrtc-box-video front-small box-video-" + stream.id();
+                videoCont = "remoteVideo" + stream.id();
+            } else {
+                classCont = "intel-webrtc-box-video front-small box-video-" + stream.id();
+                videoCont = "localScreen";
+                type = "localScreen";
             }
-            if (!resolution.width || !resolution.height || resolution.width > 640) {
-                resolution = {width: 640, height: 480};
+
+            var nuevoBox = "";
+            nuevoBox += "<div class='" + classCont + " " + type + "'  ng-click='swapVideos(\"" + type + "\")'>";
+            nuevoBox += " <div id='" + videoCont + "' class='intel-webrtc-video'>";
+            nuevoBox += " </div>";
+            nuevoBox += "</div>";
+
+            angular.element(document.getElementById('intel-webrtc-box-videos')).append($compile(nuevoBox)($scope))
+
+            stream.show(videoCont);
+
+            //document.getElementById(videoCont).getElementsByTagName('video')[0].setAttribute("ng-dblclick", "mens()");
+            //document.getElementById(videoCont).innerHTML = $compile(document.getElementById(videoCont).innerHTML)($scope);
+        }
+
+        //$scope.mens = function() {
+        //    console.log("llegaaa!");
+        //}
+
+        $scope.swapVideos = function(videoClass) {
+            var videoBack = document.getElementsByClassName("intel-webrtc-box-video back-100")[0];
+            var videoFront = document.getElementsByClassName("front-small " + videoClass)[0];
+
+            if (typeof videoFront == 'undefined') {
+                videoFront = document.getElementsByClassName("front-small")[0];
             }
-            div.setAttribute('style', 'width: '+resolution.width+'px; height: '+resolution.height+'px; margin: 0 auto;');
-            div.setAttribute('id', 'remoteVideo' + streamId);
-            div.setAttribute('title', 'Stream#' + streamId);
-            document.getElementById('intel-webrtc-box-videos').appendChild(div);
-            stream.show('remoteVideo' + streamId);
+            if (typeof videoFront == 'undefined') {
+                return;
+            }
+
+            videoFront.classList.remove("front-small");
+            videoFront.classList.add("back-100");
+            videoBack.classList.remove("back-100");
+            videoBack.classList.add("front-small");
+        }
+
+        function requestFullScreen(element) {
+            // Supports most browsers and their versions.
+            var requestMethod = element.requestFullScreen || element.webkitRequestFullScreen || element.mozRequestFullScreen || element.msRequestFullScreen;
+
+            if (requestMethod) { // Native full screen.
+                requestMethod.call(element);
+            } else if (typeof window.ActiveXObject !== "undefined") { // Older IE.
+                var wscript = new ActiveXObject("WScript.Shell");
+                if (wscript !== null) {
+                    wscript.SendKeys("{F11}");
+                }
+            }
+        }
+
+        $scope.maximizeVideos = function() {
+            console.log("entra maximize");
+            var boxVideos = document.getElementById("intel-webrtc-box-videos-full");
+            //$.fullscreen.open(boxVideos);
+            requestFullScreen(boxVideos);
         }
 
         function trySubscribeStream (stream) {
-            if (stream instanceof Woogeen.RemoteMixedStream) {
-                stream.on('VideoLayoutChanged', function () {
-                    L.Logger.info('stream', stream.id(), 'VideoLayoutChanged');
-                });
-                L.Logger.info('subscribing:', stream.id());
-                var resolutions = stream.resolutions();
-                var videoOpt = true;
-                var resolution;
-                if (resolutions.length >= 1) {
-                    resolution = resolutions[0];
+            if (!(stream instanceof Woogeen.RemoteMixedStream)) {
+                if (streams.local != stream) {
+                    L.Logger.info('subscribing:', stream.id());
+                    woogeenClient.subscribe(stream, function () {
+                        L.Logger.info('subscribed:', stream.id());
+                        displayStream(stream, {}, 'remoteStream');
+                    }, function (err) {
+                        L.Logger.error(stream.id(), 'subscribe failed:', err);
+                    });
+                } else {
+                    displayStream(stream, {}, 'localStream');
                 }
-                videoOpt = {resolution: resolution};
-                L.Logger.info('subscribe stream with option:', resolution);
-                woogeenClient.subscribe(stream, {video: videoOpt}, function () {
-                    L.Logger.info('subscribed:', stream.id());
-                    displayStream(stream, resolution);
-                }, function (err) {
-                    L.Logger.error(stream.id(), 'subscribe failed:', err);
-                });
             }
         }
 
@@ -151,21 +200,24 @@
             trySubscribeStream(stream);
         });
 
+        woogeenClient.on('stream-removed', function (event) {
+            var stream = event.stream;
+            var id = 'remoteVideo' + stream.id();
+            var element = document.getElementsByClassName('box-video-' + stream.id())[0];
+            if (typeof element !== 'undefined' && element != null) {
+                element.parentElement.removeChild(element);
+            }
+        });
+
         $scope.initCall = function() {
             //setea stun y turn servers
             var stunJson = {};
-            if ($scope.config.stun_server !== null && typeof $scope.config.stun_server_ip != 'undefined') {
-                stunJson.urls = 'stun:' + $scope.config.stun_server.ip;
+            if ($scope.config.stun_server_ip !== null) {
+                stunJson.urls = 'stun:' + $scope.config.stun_server_ip;
             }
             var turnJson = {};
-            if ($scope.config.turn_server !== null && typeof $scope.config.turn_server.ip !== 'undefined') {
-                turnJson.urls = ['turn:' + $scope.config.turn_server.ip + '?transport=udp', 'turn:' + $scope.config.turn_server.ip + '?transport=tcp'];
-            }
-            if ($scope.config.turn_server !== null && typeof $scope.config.turn_server.username !== 'undefined') {
-                turnJson.username = $scope.config.turn_server.username;
-            }
-            if ($scope.config.turn_server !== null && typeof $scope.config.turn_server.credential !== 'undefined') {
-                turnJson.credential = $scope.config.turn_server.credential;
+            if ($scope.config.turn_server_ip !== null) {
+                turnJson.urls = ['turn:' + $scope.config.turn_server_ip + '?transport=udp', 'turn:' + $scope.config.turn_server_ip + '?transport=tcp'];
             }
             woogeenClient.setIceServers([
                 stunJson,
@@ -223,21 +275,15 @@
         $scope.initShare = function() {
             woogeenClient.shareScreen({extensionId: $scope.config.extension_id}, function (stream) {
                 streams.localScreen = stream;
-                woogeenClient.mix(streams.localScreen, function() {
-                  $scope.$apply(function() {
-                      $scope.onShare = true;
-                  });
-                }, function(err) {
-                  L.Logger.error('mix failed:', err);
+                $scope.$apply(function() {
+                  $scope.onShare = true;
                 });
+                displayStream(streams.localScreen, {}, 'localScreen');
             }, function (err) {
                 if (streams.localScreen != null) {
-                    woogeenClient.mix(streams.localScreen, function() {
-                      $scope.$apply(function() {
-                          $scope.onShare = true;
-                      });
-                    }, function(err) {
-                      L.Logger.error('mix failed:', err);
+                    displayStream(streams.localScreen, {}, 'localScreen');
+                    $scope.$apply(function() {
+                      $scope.onShare = true;
                     });
                 } else {
                     L.Logger.error('share screen failed:', err);
