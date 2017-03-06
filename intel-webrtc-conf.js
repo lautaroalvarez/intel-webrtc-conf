@@ -17,7 +17,6 @@
       ctlrIntelWebrtc.$inject = ['$scope', '$rootScope', '$compile'];
 
       function ctlrIntelWebrtc($scope, $rootScope, $compile) {
-        $scope.jqPluginSrc = currentScriptPath.replace('intel-webrtc-conf.js', 'components/jq-fullscreen/release/jquery.fullscreen.min.js');
         var self = this;
         $scope.config = {
             room_id : '',
@@ -124,9 +123,7 @@
         }
 
         $scope.maximizeVideos = function() {
-            console.log("entra maximize");
             var boxVideos = document.getElementById("intel-webrtc-box-videos-full");
-            //$.fullscreen.open(boxVideos);
             requestFullScreen(boxVideos);
         }
 

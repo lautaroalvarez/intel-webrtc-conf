@@ -18,8 +18,5 @@
     "node_modules",
     "bower_components"
   ],
-  "private": false,
-  "dependencies": {
-    "jq-fullscreen": "^0.6.0"
-  }
+  "private": false
 }
