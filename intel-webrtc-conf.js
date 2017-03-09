@@ -82,14 +82,7 @@
             angular.element(document.getElementById('intel-webrtc-box-videos')).append($compile(nuevoBox)($scope))
 
             stream.show(videoCont);
-
-            //document.getElementById(videoCont).getElementsByTagName('video')[0].setAttribute("ng-dblclick", "mens()");
-            //document.getElementById(videoCont).innerHTML = $compile(document.getElementById(videoCont).innerHTML)($scope);
         }
-
-        //$scope.mens = function() {
-        //    console.log("llegaaa!");
-        //}
 
         $scope.swapVideos = function(videoClass) {
             var videoBack = document.getElementsByClassName("intel-webrtc-box-video back-100")[0];
@@ -179,7 +172,6 @@
 
         woogeenClient.on('stream-added', function (event) {
             var stream = event.stream;
-            // if(stream.id() !== localStream.id()) return;
             L.Logger.info('stream added:', stream.id());
             var fromMe = false;
             for (var i in woogeenClient.localStreams) {
@@ -245,7 +237,10 @@
                     }
                     streams.local = stream;
                     trySubscribeStream(stream);
-                    woogeenClient.publish(streams.local, {maxVideoBW: 300}, function (st) {
+                    woogeenClient.publish(streams.local, {
+                        maxVideoBW: 300,
+                        unmix: true
+                    }, function (st) {
                         L.Logger.info('stream published:', st.id());
                     }, function (err) {
                         $scope.$apply(function() {
