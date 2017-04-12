@@ -25,7 +25,8 @@
             share_screen : false,
             isHttps: false,
             stun_server_ip: null,
-            turn_server_ip: null
+            turn_server_ip: null,
+            isNodeWebkit: false
         };
         var woogeenClient = Woogeen.ConferenceClient.create({});
         var streams = {
@@ -51,9 +52,14 @@
             $scope.config.room_id = configParams.room_id;
             $scope.config.token = configParams.token;
             $scope.config.extension_id = (typeof configParams.extension_id !== 'undefined' ? configParams.extension_id : $scope.config.extension_id);
+            $scope.config.isNodeWebkit = (typeof configParams.isNodeWebkit !== 'undefined' ? configParams.isNodeWebkit : $scope.config.isNodeWebkit);
             $scope.config.share_screen = (typeof configParams.share_screen !== 'undefined' ? configParams.share_screen : $scope.config.share_screen);
             $scope.config.stun_server_ip = (typeof configParams.stun_server_ip !== 'undefined' ? configParams.stun_server_ip : $scope.config.stun_server_ip);
             $scope.config.turn_server_ip = (typeof configParams.turn_server_ip !== 'undefined' ? configParams.turn_server_ip : $scope.config.turn_server_ip);
+
+            if ($scope.config.isNodeWebkit) {
+                nw.Screen.Init();
+            }
 
             $scope.waitingInit = false;
         };
@@ -265,25 +271,66 @@
         }
 
         $scope.initShare = function() {
-            woogeenClient.shareScreen({extensionId: $scope.config.extension_id}, function (stream) {
-                streams.localScreen = stream;
-                $scope.$apply(function() {
-                  $scope.onShare = true;
+            if ($scope.config.isNodeWebkit) {
+                nw.Screen.chooseDesktopMedia(["window","screen"],
+                function(streamId) {
+                    var vid_constraint = {
+                        mandatory: {
+                            chromeMediaSource: 'desktop',
+                            chromeMediaSourceId: streamId,
+                            maxWidth: 1920,
+                            maxHeight: 1080
+                        },
+                        optional: []
+                    };
+                    navigator.webkitGetUserMedia({audio: false, video: vid_constraint}, function success(stream_asd) {
+                        $scope.$apply(function() {
+                          $scope.onShare = true;
+                        });
+                        streams.localScreen = new Woogeen.LocalStream({
+                            audio:false,
+                            video: {
+                                device: 'screen'
+                            },
+                            mediaStream: stream_asd
+                        });
+                        displayStream(streams.localScreen, {}, 'localScreen');
+                        woogeenClient.publish(streams.localScreen, {
+                            maxVideoBW: 300,
+                            unmix: true
+                        }, function (st) {
+                            L.Logger.info('stream published:', st.id());
+                        }, function (err) {
+                            $scope.$apply(function() {
+                                $scope.errorMsg = "Hubo un error al conectar con el servidor.";
+                            });
+                            L.Logger.error('publish failed:', err);
+                        });
+                    }, function fail(err) {
+                        console.error(err);
+                    });
                 });
-                displayStream(streams.localScreen, {}, 'localScreen');
-            }, function (err) {
-                if (streams.localScreen != null) {
+            } else {
+                woogeenClient.shareScreen({extensionId: $scope.config.extension_id}, function (stream) {
+                    streams.localScreen = stream;
+                    $scope.$apply(function() {
+                        $scope.onShare = true;
+                    });
                     displayStream(streams.localScreen, {}, 'localScreen');
-                    $scope.$apply(function() {
-                      $scope.onShare = true;
-                    });
-                } else {
-                    L.Logger.error('share screen failed:', err);
-                    $scope.$apply(function() {
-                        $scope.errorMsg = "No se pudo compartir la pantalla. Por favor verifique que el ID de la extensión sea el correcto.";
-                    });
-                }
-            });
+                }, function (err) {
+                    if (streams.localScreen != null) {
+                        displayStream(streams.localScreen, {}, 'localScreen');
+                        $scope.$apply(function() {
+                            $scope.onShare = true;
+                        });
+                    } else {
+                        L.Logger.error('share screen failed:', err);
+                        $scope.$apply(function() {
+                            $scope.errorMsg = "No se pudo compartir la pantalla. Por favor verifique que el ID de la extensión sea el correcto.";
+                        });
+                    }
+                });
+            }
         }
 
         $scope.finishShare = function() {
