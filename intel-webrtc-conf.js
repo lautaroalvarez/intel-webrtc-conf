@@ -38,7 +38,21 @@
         $scope.onCall = false;
         $scope.onShare = false;
         $scope.finished = false;
+        $scope.selected_camera = "indefinida";
+        $scope.cameraIds = [];
         $scope.errorMsg = "";
+
+        navigator.mediaDevices.enumerateDevices()
+            .then(function gotDevices(deviceInfos) {
+                deviceInfos.map(function(device) {
+                    if (device.kind === 'videoinput') {
+                        $scope.cameraIds.push(device);
+                    }
+                });
+          	})
+            .catch(function fail(error) {
+                console.error('navigator.getUserMedia error: ', error);
+            });
 
         self.start = function(configParams) {
             if (typeof configParams === 'undefined' || typeof configParams.room_id === 'undefined' || configParams.room_id == '') {
@@ -228,33 +242,69 @@
             //--se une a la sala
             woogeenClient.join($scope.config.token, function (resp) {
                 //--crea el stream local
-                Woogeen.LocalStream.create({
-                    video: {
-                        device: 'camera'
-                    },
-                    audio: true
-                }, function (err, stream) {
-                    if (err) {
-                        $scope.$apply(function() {
+                if ($scope.selected_camera == null || $scope.selected_camera == 'indefinida') {
+                    Woogeen.LocalStream.create({
+                        video: {
+                            device: 'camera'
+                        },
+                        audio: true
+                    }, function (err, stream) {
+                        if (err) {
+                            $scope.$apply(function() {
+                                $scope.onCall = false;
+                                $scope.errorMsg = "Hubo un error al acceder a la cámara.";
+                            });
+                            return L.Logger.error('create LocalStream failed:', err);
+                        }
+                        streams.local = stream;
+                        trySubscribeStream(stream);
+                        woogeenClient.publish(streams.local, {
+                            maxVideoBW: 300,
+                            unmix: true
+                        }, function (st) {
+                            L.Logger.info('stream published:', st.id());
+                        }, function (err) {
+                            $scope.$apply(function() {
+                                $scope.errorMsg = "Hubo un error al conectar con el servidor.";
+                            });
+                            L.Logger.error('publish failed:', err);
+                        });
+                    });
+                } else {
+                    navigator.mediaDevices.getUserMedia({
+                        audio: true,
+                        video: {
+                            deviceId: {
+                                exact: $scope.selected_camera
+                            }
+                        }
+                    }).
+                        then(function(myStream) {
+                            streams.local = new Woogeen.LocalStream({
+                                video: {
+                                    device: 'camera'
+                                },
+                                audio: true,
+                                mediaStream: myStream
+                            });
+                            trySubscribeStream(streams.local);
+                            woogeenClient.publish(streams.local, {
+                                maxVideoBW: 300,
+                                unmix: true
+                            }, function (st) {
+                                L.Logger.info('stream published:', st.id());
+                            }, function (err) {
+                                $scope.$apply(function() {
+                                    $scope.errorMsg = "Hubo un error al conectar con el servidor.";
+                                });
+                                L.Logger.error('publish failed:', err);
+                            });
+                        })
+                        .catch(function fail(err) {
                             $scope.onCall = false;
                             $scope.errorMsg = "Hubo un error al acceder a la cámara.";
-                        });
-                        return L.Logger.error('create LocalStream failed:', err);
-                    }
-                    streams.local = stream;
-                    trySubscribeStream(stream);
-                    woogeenClient.publish(streams.local, {
-                        maxVideoBW: 300,
-                        unmix: true
-                    }, function (st) {
-                        L.Logger.info('stream published:', st.id());
-                    }, function (err) {
-                        $scope.$apply(function() {
-                            $scope.errorMsg = "Hubo un error al conectar con el servidor.";
-                        });
-                        L.Logger.error('publish failed:', err);
-                    });
-                });
+                        })
+                }
 
                 var remoteStreams = resp.streams;
                 remoteStreams.map(function (stream) {
