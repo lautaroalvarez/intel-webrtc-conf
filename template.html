@@ -70,34 +70,46 @@
     .top-margin-30 {
       margin-top: 30px;
     }
+
+    .error-toast-container {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      text-align: center;
+    }
 </style>
 
-<div id="intel-webrtc-box-botonera" class="marg-bottom" ng-hide="finished">
-    <a href="" class="btn ngHide" ng-show='onCall' ng-click='finishCall()'>Finalizar Llamada</a>
-    <a href="" class="btn ngHide" ng-show='onCall && config.share_screen && !onShare' ng-click='initShare()'>Iniciar Share Screen</a>
-    <a href="" class="btn ngHide" ng-show='onShare' ng-click='finishShare()'>Finalizar Share Screen</a>
-    <div class="row top-margin-30" ng-hide='onCall || waitingInit'>
-      <div class="col m3 s3">
-        <p>Selección de cámara:</p>
-      </div>
-      <div class="col m4 s4">
-        <select ng-model="selected_camera">
-          <option value="indefinida">Cualquier cámara</option>
-          <option ng-repeat="opt in cameraIds" value="{{opt.deviceId}}">{{opt.label}}</option>
-        </select>
-      </div>
-      <div class="col m5 s5">
-        <a href="" class="btn" ng-click='initCall()'>Iniciar Llamada</a>
-      </div>
+<div id="intel-webrtc-box-botonera" class="marg-bottom" ng-hide="status == 'finished'">
+  <a href="" class="btn ngHide" ng-show='status == "calling"' ng-click='finishCall()'>Finalizar Llamada</a>
+  <a href="" class="btn ngHide" ng-show='status == "calling" && config.share_screen && !onShare' ng-click='initShare()'>Iniciar Share Screen</a>
+  <a href="" class="btn ngHide" ng-show='onShare' ng-click='finishShare()'>Finalizar Share Screen</a>
+  <div class="ngHide row top-margin-30" ng-show='status == "configuration" && substatus != "searching_camera" && substatus != "cant_search_cameras"'>
+    <div class="col m3 s3">
+      <p>Selección de cámara:</p>
     </div>
-    <p class="ngHide" ng-show="errorMsg != ''">{{errorMsg}}</p>
+    <div class="col m4 s4">
+      <select ng-model="selected_camera" ng-if="cameraIds">
+        <option value="indefinida">Cualquier cámara</option>
+        <option ng-repeat="opt in cameraIds" value="{{opt.deviceId}}">{{opt.label}}</option>
+      </select>
+    </div>
+    <div class="col m5 s5">
+      <a href="" class="btn" ng-click='initCall()'>Iniciar Llamada</a>
+    </div>
+  </div>
+  <p class="ngHide" ng-show="status == 'configuration' && substatus == 'searching_camera'">Buscando cámaras...</p>
+  <a href="" class="btn ngHide" ng-show="status == 'configuration' && substatus == 'cant_search_cameras'" ng-click="searchCameras()">Buscar cámara</a>
+  <div id="errorMessages" class="error-toast-container"></div>
 </div>
 
-<div class="center-70">
-  <div class="cont-acomodador size-4-3 ngHide" id="intel-webrtc-box-videos-full" ng-dblclick="maximizeVideos();" ng-show="onCall">
+<div class="ngHide center-70" ng-show='status == "calling"'>
+  <div class="cont-acomodador size-4-3 ngHide" id="intel-webrtc-box-videos-full" ng-dblclick="maximizeVideos();" ng-show="status == 'calling'">
     <div class="cont-interno">
       <div class="contenido" id="intel-webrtc-box-videos">
       </div>
     </div>
   </div>
 </div>
+
+<p class="ngHide" ng-show="status == 'initializing'">Iniciando llamada...</p>

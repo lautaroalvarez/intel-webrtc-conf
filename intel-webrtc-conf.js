@@ -34,33 +34,73 @@
             remote: null,
             localScreen: null
         };
-        $scope.waitingInit = true;
-        $scope.onCall = false;
+        $scope.status = "initializing";
+        $scope.substatus = "searching_camera";
         $scope.onShare = false;
-        $scope.finished = false;
         $scope.selected_camera = "indefinida";
         $scope.cameraIds = [];
-        $scope.errorMsg = "";
 
-        navigator.mediaDevices.enumerateDevices()
-            .then(function gotDevices(deviceInfos) {
-                deviceInfos.map(function(device) {
-                    if (device.kind === 'videoinput') {
-                        $scope.cameraIds.push(device);
-                    }
-                });
-          	})
-            .catch(function fail(error) {
-                console.error('navigator.getUserMedia error: ', error);
+        $scope.safeApply = function(fn) {
+            var phase = this.$root.$$phase;
+            if(phase == '$apply' || phase == '$digest') {
+                if(fn && (typeof(fn) === 'function')) {
+                    fn();
+                }
+            } else {
+                this.$apply(fn);
+            }
+        }
+
+        $scope.searchCameras = function() {
+            $scope.safeApply(function() {
+                $scope.substatus = "searching_camera";
             });
+            navigator.mediaDevices.enumerateDevices()
+                .then(function gotDevices(deviceInfos) {
+                    deviceInfos.map(function(device) {
+                        if (device.kind === 'videoinput') {
+                            $scope.cameraIds.push(device);
+                        }
+                    });
+                    if ($scope.cameraIds.length == 0) {
+                        launchMessage({
+                          text: "No se ha encontrado una cámara."
+                        });
+                        $scope.safeApply(function() {
+                            $scope.substatus = "cant_search_cameras";
+                        });
+                        return;
+                    }
+                    $scope.safeApply(function() {
+                        $scope.substatus = "";
+                    });
+                })
+                .catch(function fail(error) {
+                    launchMessage({
+                      text: "No se ha encontrado una cámara."
+                    });
+                    $scope.safeApply(function() {
+                        $scope.substatus = "cant_search_cameras";
+                    });
+                    console.error('navigator.getUserMedia error: ', error);
+                });
+        }
+
+        $scope.searchCameras();
 
         self.start = function(configParams) {
+            $scope.status = "configuration";
+
             if (typeof configParams === 'undefined' || typeof configParams.room_id === 'undefined' || configParams.room_id == '') {
-                $scope.errorMsg = 'La sala es inválida. No se puede iniciar la llamada.';
+                launchMessage({
+                  text: 'La sala es inválida. No se puede iniciar la llamada.'
+                });
                 return;
             }
             if (typeof configParams.token === 'undefined' || configParams.token == '') {
-                $scope.errorMsg = 'El token es inválido. No se puede iniciar la llamada.';
+                launchMessage({
+                  text: 'El token es inválido. No se puede iniciar la llamada.'
+                });
                 return;
             }
             $scope.config.room_id = configParams.room_id;
@@ -74,9 +114,7 @@
             if ($scope.config.isNodeWebkit) {
                 nw.Screen.Init();
             }
-
-            $scope.waitingInit = false;
-        };
+        }
 
         function displayStream (stream, resolution, type) {
             var classCont = "";
@@ -157,7 +195,10 @@
         }
 
         function finalizarStreams() {
-            $scope.onCall = false;
+            $scope.safeApply(function() {
+              $scope.status = 'finished';
+              $scope.substatus = "";
+            });
             $scope.onShare = false;
             if (streams.local){
                 streams.local.close();
@@ -184,8 +225,8 @@
         };
 
         woogeenClient.on('server-disconnected', function () {
-            $scope.$apply(function() {
-                $scope.errorMsg = "Hubo un error al conectar con el servidor.";
+            launchMessage({
+                text: "Hubo un error al conectar con el servidor."
             });
             L.Logger.info('Server disconnected');
         });
@@ -233,7 +274,10 @@
                 turnJson
             ]);
 
-            $scope.onCall = true;
+            $scope.safeApply(function() {
+              $scope.status = "calling";
+              $scope.substatus = "";
+            });
             //--setea logs
             L.Logger.setLogLevel(L.Logger.INFO);
             //--chequea si es https
@@ -250,9 +294,12 @@
                         audio: true
                     }, function (err, stream) {
                         if (err) {
-                            $scope.$apply(function() {
-                                $scope.onCall = false;
-                                $scope.errorMsg = "Hubo un error al acceder a la cámara.";
+                            $scope.safeApply(function() {
+                                $scope.status = "configuration";
+                                $scope.substatus = "";
+                            });
+                            launchMessage({
+                              text: "Hubo un error al acceder a la cámara."
                             });
                             return L.Logger.error('create LocalStream failed:', err);
                         }
@@ -264,8 +311,8 @@
                         }, function (st) {
                             L.Logger.info('stream published:', st.id());
                         }, function (err) {
-                            $scope.$apply(function() {
-                                $scope.errorMsg = "Hubo un error al conectar con el servidor.";
+                            launchMessage({
+                              text: "Hubo un error al conectar con el servidor."
                             });
                             L.Logger.error('publish failed:', err);
                         });
@@ -294,15 +341,20 @@
                             }, function (st) {
                                 L.Logger.info('stream published:', st.id());
                             }, function (err) {
-                                $scope.$apply(function() {
-                                    $scope.errorMsg = "Hubo un error al conectar con el servidor.";
+                                launchMessage({
+                                  text: "Hubo un error al conectar con el servidor."
                                 });
                                 L.Logger.error('publish failed:', err);
                             });
                         })
                         .catch(function fail(err) {
-                            $scope.onCall = false;
-                            $scope.errorMsg = "Hubo un error al acceder a la cámara.";
+                            $scope.safeApply(function() {
+                                $scope.status = "finished";
+                                $scope.substatus = "";
+                            });
+                            launchMessage({
+                              text: "Hubo un error al acceder a la cámara."
+                            });
                         })
                 }
 
@@ -312,9 +364,11 @@
                     trySubscribeStream(stream);
                 });
             }, function (err) {
-                $scope.$apply(function() {
-                    $scope.onCall = false;
-                    $scope.errorMsg = "Hubo un error al conectar con el servidor.";
+                $scope.safeApply(function() {
+                    $scope.status = "configuration";
+                });
+                launchMessage({
+                  text: "Hubo un error al conectar con el servidor."
                 });
                 L.Logger.error('server connection failed:', err);
             });
@@ -334,7 +388,7 @@
                         optional: []
                     };
                     navigator.webkitGetUserMedia({audio: false, video: vid_constraint}, function success(stream_asd) {
-                        $scope.$apply(function() {
+                        $scope.safeApply(function() {
                           $scope.onShare = true;
                         });
                         streams.localScreen = new Woogeen.LocalStream({
@@ -351,8 +405,8 @@
                         }, function (st) {
                             L.Logger.info('stream published:', st.id());
                         }, function (err) {
-                            $scope.$apply(function() {
-                                $scope.errorMsg = "Hubo un error al conectar con el servidor.";
+                            launchMessage({
+                              text: "Hubo un error al conectar con el servidor."
                             });
                             L.Logger.error('publish failed:', err);
                         });
@@ -363,20 +417,20 @@
             } else {
                 woogeenClient.shareScreen({extensionId: $scope.config.extension_id}, function (stream) {
                     streams.localScreen = stream;
-                    $scope.$apply(function() {
+                    $scope.safeApply(function() {
                         $scope.onShare = true;
                     });
                     displayStream(streams.localScreen, {}, 'localScreen');
                 }, function (err) {
                     if (streams.localScreen != null) {
                         displayStream(streams.localScreen, {}, 'localScreen');
-                        $scope.$apply(function() {
+                        $scope.safeApply(function() {
                             $scope.onShare = true;
                         });
                     } else {
                         L.Logger.error('share screen failed:', err);
-                        $scope.$apply(function() {
-                            $scope.errorMsg = "No se pudo compartir la pantalla. Por favor verifique que el ID de la extensión sea el correcto.";
+                        launchMessage({
+                          text: "No se pudo compartir la pantalla. Por favor verifique que el ID de la extensión sea el correcto."
                         });
                     }
                 });
@@ -394,15 +448,32 @@
 
         $scope.finishCall = function() {
             finalizarStreams();
-            $scope.finished = true;
             $scope.onShare = false;
-            $scope.onCall = false;
+            $scope.safeApply(function() {
+              $scope.status = "finished";
+              $scope.substatus = "";
+            });
         }
 
 
         $rootScope.$on('$stateChangeSuccess', function() {
             finalizarStreams();
         });
+
+        var messageCount = 0;
+        function launchMessage(message) {
+          var nuevoMsg = "";
+          nuevoMsg += "<div class='error-toast error-msg-" + messageCount + "' ng-click='removeThisMsg(" + messageCount + ")'>";
+          nuevoMsg += " <p>" + message.text + "</p>";
+          nuevoMsg += "</div>";
+          messageCount++;
+
+          angular.element(document.getElementById('errorMessages')).append($compile(nuevoMsg)($scope))
+        }
+
+        $scope.removeThisMsg = function(counter) {
+          document.getElementsByClassName("error-msg-" + counter)[0].remove();
+        }
       }
 
 })(angular);
