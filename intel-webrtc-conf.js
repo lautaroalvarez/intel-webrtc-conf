@@ -173,9 +173,27 @@
             }
         }
 
-        $scope.maximizeVideos = function() {
+        function exitFullScreen(element) {
+            // Supports most browsers and their versions.
+            var exitMethod = document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen;
+
+            if (exitMethod) { // Native full screen.
+                exitMethod.call(document);
+            } else if (typeof window.ActiveXObject !== "undefined") { // Older IE.
+                var wscript = new ActiveXObject("WScript.Shell");
+                if (wscript !== null) {
+                    wscript.SendKeys("{F11}");
+                }
+            }
+        }
+
+        $scope.swapMaximizeVideos = function() {
             var boxVideos = document.getElementById("intel-webrtc-box-videos-full");
-            requestFullScreen(boxVideos);
+            if((window.fullScreen) || (window.innerWidth == screen.width && window.innerHeight == screen.height)) {
+                exitFullScreen(boxVideos);
+            } else {
+                requestFullScreen(boxVideos);
+            }
         }
 
         function trySubscribeStream (stream) {

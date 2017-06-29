@@ -1,6 +1,6 @@
 {
   "name": "intel-webrtc-conf",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "main": "intel-webrtc-conf.js",
   "authors": [
     "Lautaro Alvarez <lautarolalvarez@gmail.com>"

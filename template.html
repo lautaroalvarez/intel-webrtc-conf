@@ -78,6 +78,16 @@
       right: 0;
       text-align: center;
     }
+    .btn-fullscreen {
+      position: absolute;
+      right: 0;
+      top: 0;
+      z-index: 10000;
+      margin: 8px;
+      background-color: #ff4081;
+      color: white;
+      padding: 10px;
+    }
 </style>
 
 <div id="intel-webrtc-box-botonera" class="marg-bottom" ng-hide="status == 'finished'">
@@ -104,7 +114,8 @@
 </div>
 
 <div class="ngHide center-70" ng-show='status == "calling"'>
-  <div class="cont-acomodador size-4-3 ngHide" id="intel-webrtc-box-videos-full" ng-dblclick="maximizeVideos();" ng-show="status == 'calling'">
+  <div class="cont-acomodador size-4-3 ngHide" id="intel-webrtc-box-videos-full" ng-show="status == 'calling'">
+    <a href="" ng-click="swapMaximizeVideos()" class="btn-fullscreen">Full</a>
     <div class="cont-interno">
       <div class="contenido" id="intel-webrtc-box-videos">
       </div>
