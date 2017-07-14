@@ -212,7 +212,7 @@
             }
         }
 
-        function finalizarStreams() {
+        function finishStreams() {
             $scope.safeApply(function() {
               $scope.status = 'finished';
               $scope.substatus = "";
@@ -393,8 +393,14 @@
         }
 
         $scope.initShare = function() {
-            if ($scope.config.isNodeWebkit) {
-                nw.Screen.chooseDesktopMedia(["window","screen"],
+            if ($scope.config.isNodeWebkit)
+                return $scope.initShareNodeWebkit();
+            return $scope.initShareWeb();
+        }
+
+        $scope.initShareNodeWebkit = function() {
+            nw.Screen.chooseDesktopMedia(
+                ["window", "screen"],
                 function(streamId) {
                     var vid_constraint = {
                         mandatory: {
@@ -405,7 +411,7 @@
                         },
                         optional: []
                     };
-                    navigator.webkitGetUserMedia({audio: false, video: vid_constraint}, function success(stream_asd) {
+                    navigator.webkitGetUserMedia({audio: false, video: vid_constraint}, function success(streamScreen) {
                         $scope.safeApply(function() {
                           $scope.onShare = true;
                         });
@@ -414,7 +420,7 @@
                             video: {
                                 device: 'screen'
                             },
-                            mediaStream: stream_asd
+                            mediaStream: streamScreen
                         });
                         displayStream(streams.localScreen, {}, 'localScreen');
                         woogeenClient.publish(streams.localScreen, {
@@ -431,28 +437,30 @@
                     }, function fail(err) {
                         console.error(err);
                     });
+                }
+            );
+        }
+
+        $scope.initShareWeb = function() {
+            woogeenClient.shareScreen({extensionId: $scope.config.extension_id}, function (stream) {
+                streams.localScreen = stream;
+                $scope.safeApply(function() {
+                    $scope.onShare = true;
                 });
-            } else {
-                woogeenClient.shareScreen({extensionId: $scope.config.extension_id}, function (stream) {
-                    streams.localScreen = stream;
+                displayStream(streams.localScreen, {}, 'localScreen');
+            }, function (err) {
+                if (streams.localScreen != null) {
+                    displayStream(streams.localScreen, {}, 'localScreen');
                     $scope.safeApply(function() {
                         $scope.onShare = true;
                     });
-                    displayStream(streams.localScreen, {}, 'localScreen');
-                }, function (err) {
-                    if (streams.localScreen != null) {
-                        displayStream(streams.localScreen, {}, 'localScreen');
-                        $scope.safeApply(function() {
-                            $scope.onShare = true;
-                        });
-                    } else {
-                        L.Logger.error('share screen failed:', err);
-                        launchMessage({
-                          text: "No se pudo compartir la pantalla. Por favor verifique que el ID de la extensión sea el correcto."
-                        });
-                    }
-                });
-            }
+                } else {
+                    L.Logger.error('share screen failed:', err);
+                    launchMessage({
+                      text: "No se pudo compartir la pantalla. Por favor verifique que el ID de la extensión sea el correcto."
+                    });
+                }
+            });
         }
 
         $scope.finishShare = function() {
@@ -465,7 +473,7 @@
         }
 
         $scope.finishCall = function() {
-            finalizarStreams();
+            finishStreams();
             $scope.onShare = false;
             $scope.safeApply(function() {
               $scope.status = "finished";
@@ -475,7 +483,7 @@
 
 
         $rootScope.$on('$stateChangeSuccess', function() {
-            finalizarStreams();
+            finishStreams();
         });
 
         var messageCount = 0;
